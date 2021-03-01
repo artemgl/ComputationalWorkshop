@@ -1,27 +1,31 @@
 import numpy as np
 
 def Gauss(matrix, vector):
-    n, _ = matrix.shape
+    a = matrix.copy()
+    b = vector.copy()
+
+    n, _ = a.shape
+
     result = np.array([0 for i in range(0, n)], float)
 
     for k in range(0, n):
-        p = np.abs(matrix[k:, k]).argmax() + k
+        p = np.abs(a[k:, k]).argmax() + k
         if p != k:
-            matrix[k], matrix[p] = matrix[p].copy(), matrix[k].copy()
-            vector[k], vector[p] = vector[p].copy(), vector[k].copy()
+            a[k], a[p] = a[p].copy(), a[k].copy()
+            b[k], b[p] = b[p].copy(), b[k].copy()
 
-        tmp = matrix[k, k]
-        matrix[k, k + 1:] /= tmp
-        vector[k] /= tmp
+        tmp = a[k, k]
+        a[k, k + 1:] /= tmp
+        b[k] /= tmp
 
         for i in range(k + 1, n):
-            tmp = matrix[i, k]
-            matrix[i, k + 1:] -= matrix[k, k + 1:] * tmp
-            vector[i] -= vector[k] * tmp
+            tmp = a[i, k]
+            a[i, k + 1:] -= a[k, k + 1:] * tmp
+            b[i] -= b[k] * tmp
 
     for i in range(n - 1, -1, -1):
-        sum = np.sum(result[i + 1:] * matrix[i, i + 1:])
-        result[i] = vector[i] - sum
+        sum = np.sum(result[i + 1:] * a[i, i + 1:])
+        result[i] = b[i] - sum
 
     return result
 
@@ -71,23 +75,51 @@ def cond(matrix):
 def errorEstimate(matrix, dmatrix, vector, dvector):
     x = np.linalg.solve(matrix, vector)
     dx = x - np.linalg.solve(matrix + dmatrix, vector + dvector)
-    error = abs(dx) / abs(x)
+    error = np.linalg.norm(dx) / np.linalg.norm(x)
 
-    cond = cond(matrix)
-    errorEstimate = cond / (1. - np.linalg.norm(matrix, 2) * np.linalg.norm(dmatrix, 2)) *\
+    cond_ = cond(matrix)
+    errorEstimate = cond_ / (1. - np.linalg.norm(matrix, 2) * np.linalg.norm(dmatrix, 2)) *\
                     (np.linalg.norm(dvector) / np.linalg.norm(vector) + np.linalg.norm(dmatrix, 2) / np.linalg.norm(matrix, 2))
 
     return error, errorEstimate
 
-m = np.array([[1,0,1,0],[-1,1,-2,1],[4,0,1,-2],[-4,4,0,1]], float)
-v = np.array([2,-2,0,5], float)
+a = np.array([[-402.9,200.7],[1204.2,-603.6]], float)
+da = np.array([[0,0],[0,0]], float)
+b = np.array([200,-600], float)
+db = np.array([-1,-1], float)
 
-# print("Answer (Gauss): ", np.linalg.solve(m, v))
-# print("My answer (Gauss): ", Gauss(m, v))
-# print()
-# print("Answer (Jordan): ", np.linalg.inv(m))
-# print("My answer (Jordan): ", Jordan(m))
-m = np.array([[2,1],[0,5]], float)
-v = np.array([3,1,4,1,5], float)
+print("cond(A) = ", cond(a))
+error, estimate = errorEstimate(a, da, b, db)
+print("Error = ", error)
+print("Error estimate = ", estimate)
+print("============================")
 
-print(det(m))
+# Variant 7
+a = np.array([[9.331343,1.120045,-2.880925],[1.120045,7.086042,0.670297],[-2.880925,0.670297,5.622534]], float)
+b = np.array([7.570463,8.876384,3.411906], float)
+
+print("A =")
+print(a)
+print("A^(-1) =")
+print(Jordan(a))
+
+print()
+print("det(A) via LU-decomposition:")
+print(det(a))
+print("Accurate det(A):")
+print(np.linalg.det(a))
+
+
+print()
+print("Solution by Gauss scheme:")
+x = Gauss(a, b)
+print(x)
+print("b - Ax = ")
+print(b - a.dot(x))
+a[0, 0] *= 0.00000001
+print()
+print("Solution by Gauss scheme with changed matrix:")
+x = Gauss(a, b)
+print(x)
+print("b - Cx = ")
+print(b - a.dot(x))
